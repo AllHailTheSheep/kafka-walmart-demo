@@ -1,52 +1,61 @@
-version: '3.8'
-
 services:
-  kafka-1: # first kafka instance
-    image: bitnami/kafka:latest
+  kafka-1: # these services look complicated, their really not, i'll comment the first broker and the rest are kinda the same
+    image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-1
+    hostname: kafka-1
     ports:
       - "9092:9092"
     environment:
-      - KAFKA_ENABLE_KRAFT=yes # this means it can be a controller as well, eliminating the need for zookeeper
-      - KAFKA_CFG_NODE_ID=1
-      - KAFKA_CFG_PROCESS_ROLES=broker,controller # ensure it is recognized as both controller and broker
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093 # the voting happens on port 9093 (hence why our containers are 9092, 9094, 9095)
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 # allow this contianer to listen on data plane and control plane port
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9092 # tell clients to use 9092 (internal)
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER # controller communication listener name
-      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true # save on manual config
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller # we set this to be both a broker and controller (look up KRaft if your interested). it makes everything easier
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093 # other nodes on control plane
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093 # defining where data should be sent
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092 # defining which port clients can autodetect
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER # name of controller interface (see CONTROLLER://:9093 above?)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT # say we will communicate in plaintest on both planes (for simplicity)
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # name of listener interface
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk" # each broker needs cluster id (can be totally random)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2 # set replication to two so each node is backed up on other node (so we dont lose consumer state on failure)
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2 # replication for producers and exactly-once processing
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     volumes:
       - kafka1_data:/bitnami/kafka # persist data
 
   kafka-2:
-    image: bitnami/kafka:latest
+    image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-2
+    hostname: kafka-2
     ports:
       - "9094:9092"
     environment:
-      - KAFKA_ENABLE_KRAFT=yes
-      - KAFKA_CFG_NODE_ID=2
-      - KAFKA_CFG_PROCESS_ROLES=broker,controller
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:9092
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     volumes:
       - kafka2_data:/bitnami/kafka
 
   kafka-3:
-    image: bitnami/kafka:latest
+    image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-3
+    hostname: kafka-3
     ports:
       - "9095:9092"
     environment:
-      - KAFKA_ENABLE_KRAFT=yes
-      - KAFKA_CFG_NODE_ID=3
-      - KAFKA_CFG_PROCESS_ROLES=broker,controller
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-3:9092
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     volumes:
       - kafka3_data:/bitnami/kafka
 
