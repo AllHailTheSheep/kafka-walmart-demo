@@ -1,5 +1,5 @@
 services:
-  kafka-1: # these services look complicated, their really not, i'll comment the first broker and the rest are kinda the same
+  kafka-1: # these services look complicated, theyre really not, i'll comment the first broker and the rest are kinda the same
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-1
     hostname: kafka-1
@@ -17,7 +17,7 @@ services:
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk" # each broker needs cluster id (can be totally random)
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2 # set replication to two so each node is backed up on other node (so we dont lose consumer state on failure)
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2 # replication for producers and exactly-once processing
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # in sync replicas, which are eligible for promotion if current leader dies
     volumes:
       - kafka1_data:/bitnami/kafka # persist data
 
