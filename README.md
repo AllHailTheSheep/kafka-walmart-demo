@@ -7,7 +7,7 @@ Each producer produces events in different formats. These get fed to the process
 - Run `docker compose up -d kafka-1 kafka-2 kafka-3 kafka-ui` in the root of the project to bring the containers up (run as root if needed).
 - Run `./setup-kafka.sh` to create the topics. You may need to run as root and `chmod +x`.
 
-- Run `docker compose up -d --build producer-online producer-warehouse producer-retail` to start the Data Producers.
+- Run `docker compose up -d --build producer-online producer-warehouse producer-retail processor` to start the data producers and the processor.
 
 - Navigate to localhost:8080 to see the UI and view the live data stream. Once on localhost:8080, you can click on Topics in the side panel, and then view all of the data being sent in real-time.
 

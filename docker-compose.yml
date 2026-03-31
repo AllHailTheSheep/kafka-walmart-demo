@@ -105,14 +105,16 @@ services:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
       - TRAFFIC_MODE=NORMAL
 
-#  processor:
-#    build: ./processor
-#    container_name: processor
-#    depends_on:
-#      - kafka-1
-#    environment:
-#      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-#
+  processor:
+    build: ./processor
+    container_name: processor
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    environment:
+      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+
 #  consumer:
 #    build: ./consumer
 #    container_name: consumer
