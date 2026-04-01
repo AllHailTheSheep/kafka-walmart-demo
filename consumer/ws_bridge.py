@@ -50,7 +50,7 @@ async def kafka_loop():
 
         try:
             data = json.loads(msg.value().decode('utf-8'))
-            item = data.get('item_id') or data.get('item') or data.get('product_id') or 'unknown'
+            item = data.get('productId') or data.get('item_id') or data.get('item') or data.get('product_id') or 'unknown'
             delta = int(data.get('delta', 0))
 
             if item not in inventory:
