@@ -115,20 +115,7 @@ services:
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
 
-#  consumer:
-#    build: ./consumer
-#    container_name: consumer
-#    depends_on:
-#      - kafka-1
-#    environment:
-#      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-
-volumes:
-  kafka1_data:
-  kafka2_data:
-  kafka3_data:
-
-  ws-bridge:
+ws-bridge:
     build: ./consumer
     ports:
       - "6789:6789"
@@ -149,3 +136,20 @@ volumes:
     depends_on:
       - ws-bridge
     restart: unless-stopped
+
+#  consumer:
+#    build: ./consumer
+#    container_name: consumer
+#    depends_on:
+#      - kafka-1
+#    environment:
+#      - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+
+
+
+volumes:
+  kafka1_data:
+  kafka2_data:
+  kafka3_data:
+
+  
