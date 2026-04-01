@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walmart Inventory Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: monospace;
+        }
+
+        .header {
+            background-color: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            color: #58a6ff;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #f85149;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-dot.connected {
+            background-color: #3fb950;
+        }
+
+        #status-text {
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .main {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .item-card {
+            background-color: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .item-card .item-name {
+            font-size: 11px;
+            color: #8b949e;
+            margin-bottom: 6px;
+            word-break: break-all;
+        }
+
+        .item-card .item-qty {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e6edf3;
+        }
+
+        .item-card.went-up .item-qty {
+            color: #3fb950;
+        }
+
+        .item-card.went-down .item-qty {
+            color: #f85149;
+        }
+
+        #event-log {
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        #event-log div {
+            padding: 3px 0;
+            border-bottom: 1px solid #21262d;
+        }
+
+        #event-log .positive {
+            color: #3fb950;
+        }
+
+        #event-log .negative {
+            color: #f85149;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 Inventory Dashboard</h1>
+        <div>
+            <span class="status-dot" id="dot"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="card full-width">
+            <h2>Live Inventory Levels</h2>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Item History (last 50 events)</h2>
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Event Log</h2>
+            <div id="event-log"></div>
+        </div>
+
+        <div class="card full-width">
+            <h2>Current Stock</h2>
+            <div class="inventory-grid" id="inventory-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const WS_URL = "ws://localhost:6789"
+
+        let inventory = new Map()
+        let seriesMap = new Map()
+        let itemColors = new Map()
+
+        const colorPalette = [
+            '#58a6ff', '#3fb950', '#d2a8ff', '#ffa657',
+            '#f85149', '#79c0ff', '#56d364', '#ff7b72',
+            '#e3b341', '#a5d6ff', '#7ee787', '#ffa198'
+        ]
+
+        let colorIdx = 0
+
+        function getColor(item) {
+            if (!itemColors.has(item)) {
+                itemColors.set(item, colorPalette[colorIdx % colorPalette.length])
+                colorIdx++
+            }
+            return itemColors.get(item)
+        }
+
+        const barCtx = document.getElementById('barChart').getContext('2d')
+        const barChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Quantity',
+                    data: [],
+                    backgroundColor: [],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b949e', font: { family: 'monospace', size: 10 } },
+                        grid: { color: '#21262d' }
+                    },
+                    y: {
+                        ticks: { color: '#8b949e', font: { family: 'monospace' } },
+                        grid: { color: '#21262d' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        })
+
+        const lineCtx = document.getElementById('lineChart').getContext('2d')
+        const lineChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#8b949e',
+                            font: { family: 'monospace', size: 10 },
+                            boxWidth: 10
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#8b949e', font: { family: 'monospace', size: 9 }, maxTicksLimit: 8 },
+                        grid: { color: '#21262d' }
+                    },
+                    y: {
+                        ticks: { color: '#8b949e', font: { family: 'monospace' } },
+                        grid: { color: '#21262d' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        })
+
+        let lineLabels = []
+        let lineCounter = 0
+
+        function updateBarChart() {
+            const labels = [...inventory.keys()]
+            const data = labels.map(k => inventory.get(k))
+            const colors = labels.map(k => getColor(k))
+
+            barChart.data.labels = labels
+            barChart.data.datasets[0].data = data
+            barChart.data.datasets[0].backgroundColor = colors
+            barChart.update('none')
+        }
+
+        function updateLineChart(item, qty) {
+            lineCounter++
+            const label = lineCounter.toString()
+
+            if (!seriesMap.has(item)) {
+                const color = getColor(item)
+                const newDataset = {
+                    label: item,
+                    data: [],
+                    borderColor: color,
+                    backgroundColor: color + '22',
+                    tension: 0.3,
+                    pointRadius: 2,
+                    borderWidth: 1.5
+                }
+                lineChart.data.datasets.push(newDataset)
+                seriesMap.set(item, lineChart.data.datasets.length - 1)
+            }
+
+            if (lineLabels.length === 0 || lineLabels[lineLabels.length - 1] !== label) {
+                lineLabels.push(label)
+                lineChart.data.labels = lineLabels
+
+                lineChart.data.datasets.forEach(ds => {
+                    ds.data.push(null)
+                })
+            }
+
+            const dsIdx = seriesMap.get(item)
+            const lastIdx = lineChart.data.datasets[dsIdx].data.length - 1
+            lineChart.data.datasets[dsIdx].data[lastIdx] = qty
+
+            if (lineLabels.length > 50) {
+                lineLabels.shift()
+                lineChart.data.labels = lineLabels
+                lineChart.data.datasets.forEach(ds => {
+                    ds.data.shift()
+                })
+            }
+
+            lineChart.update('none')
+        }
+
+        function updateInventoryGrid(item, qty, delta) {
+            let card = document.getElementById('item-' + item)
+            if (!card) {
+                card = document.createElement('div')
+                card.className = 'item-card'
+                card.id = 'item-' + item
+
+                const nameEl = document.createElement('div')
+                nameEl.className = 'item-name'
+                nameEl.textContent = item
+
+                const qtyEl = document.createElement('div')
+                qtyEl.className = 'item-qty'
+
+                card.appendChild(nameEl)
+                card.appendChild(qtyEl)
+                document.getElementById('inventory-grid').appendChild(card)
+            }
+
+            card.querySelector('.item-qty').textContent = qty
+
+            card.className = 'item-card'
+            if (delta > 0) {
+                card.classList.add('went-up')
+            } else if (delta < 0) {
+                card.classList.add('went-down')
+            }
+
+            setTimeout(() => {
+                card.className = 'item-card'
+            }, 800)
+        }
+
+        function addToLog(item, qty, delta, ts) {
+            const log = document.getElementById('event-log')
+            const entry = document.createElement('div')
+            const sign = delta >= 0 ? '+' : ''
+            const time = ts ? new Date(ts).toLocaleTimeString() : new Date().toLocaleTimeString()
+            entry.className = delta >= 0 ? 'positive' : 'negative'
+            entry.textContent = `[${time}] ${item}: ${sign}${delta} → ${qty}`
+            log.insertBefore(entry, log.firstChild)
+
+            while (log.children.length > 100) {
+                log.removeChild(log.lastChild)
+            }
+        }
+
+        function setStatus(connected) {
+            const dot = document.getElementById('dot')
+            const text = document.getElementById('status-text')
+            if (connected) {
+                dot.className = 'status-dot connected'
+                text.textContent = 'Connected'
+            } else {
+                dot.className = 'status-dot'
+                text.textContent = 'Disconnected - retrying...'
+            }
+        }
+
+        function connect() {
+            const ws = new WebSocket(WS_URL)
+
+            ws.onopen = () => {
+                setStatus(true)
+            }
+
+            ws.onclose = () => {
+                setStatus(false)
+                setTimeout(connect, 3000)
+            }
+
+            ws.onerror = () => {
+                ws.close()
+            }
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data)
+
+                    if (msg.type === 'snapshot') {
+                        inventory = new Map(Object.entries(msg.data))
+                        inventory.forEach((qty, item) => {
+                            updateInventoryGrid(item, qty, 0)
+                        })
+                        updateBarChart()
+                    } else if (msg.type === 'update') {
+                        inventory.set(msg.item, msg.quantity)
+                        updateBarChart()
+                        updateLineChart(msg.item, msg.quantity)
+                        updateInventoryGrid(msg.item, msg.quantity, msg.delta)
+                        addToLog(msg.item, msg.quantity, msg.delta, msg.ts)
+                    }
+                } catch (e) {
+                    console.log("bad message", e)
+                }
+            }
+        }
+
+        connect()
+    </script>
+</body>
+</html>

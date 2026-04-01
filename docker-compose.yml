@@ -127,3 +127,25 @@ volumes:
   kafka1_data:
   kafka2_data:
   kafka3_data:
+
+  ws-bridge:
+    build: ./consumer
+    ports:
+      - "6789:6789"
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    restart: unless-stopped
+
+  dashboard:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ./consumer:/app
+    ports:
+      - "3000:3000"
+    command: python serve.py
+    depends_on:
+      - ws-bridge
+    restart: unless-stopped
