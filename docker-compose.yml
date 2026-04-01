@@ -115,7 +115,7 @@ services:
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
 
-ws-bridge:
+  ws-bridge:
     build: ./consumer
     ports:
       - "6789:6789"
