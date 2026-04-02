@@ -10,6 +10,7 @@ Each producer produces events in different formats. These get fed to the process
 - Run `docker compose up -d --build producer-online producer-warehouse producer-retail processor` to start the data producers and the processor.
 
 - Navigate to localhost:8080 to see the UI and view the live data stream. Once on localhost:8080, you can click on Topics in the side panel, and then view all of the data being sent in real-time.
+- Navigate to localhost:3000 to see the live inventory count for all the tagged products
 
 # Project Structure
 - `docker-compose.yml`: contains the Kafka deployment info. Also has deployments for future producers and consumers.
