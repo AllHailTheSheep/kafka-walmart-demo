@@ -3,26 +3,25 @@
 BROKER="kafka-1:9092"
 
 docker exec kafka-1 kafka-topics \
-  --create --if-not-exists \
+  --alter \
   --topic warehouse-restock \
   --bootstrap-server $BROKER \
-  --partitions 3 --replication-factor 2
+  --partitions 5 --replication-factor 3
 
 docker exec kafka-1 kafka-topics \
-  --create --if-not-exists \
+  --alter \
   --topic online-orders \
   --bootstrap-server $BROKER \
-  --partitions 3 --replication-factor 2
+  --partitions 5 --replication-factor 3
 
 docker exec kafka-1 kafka-topics \
-  --create --if-not-exists \
+  --alter \
   --topic store-sales \
   --bootstrap-server $BROKER \
-  --partitions 3 --replication-factor 2
+  --partitions 5 --replication-factor 3
 
 docker exec kafka-1 kafka-topics \
-  --create --if-not-exists \
+  --alter \
   --topic inventory-ssot \
   --bootstrap-server $BROKER \
-  --partitions 3 --replication-factor 2 \
-  --config cleanup.policy=compact
+  --partitions 5 --replication-factor 3
