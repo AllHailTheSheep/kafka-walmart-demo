@@ -18,6 +18,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2 # set replication to two so each node is backed up on other node (so we dont lose consumer state on failure)
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 2 # replication for producers and exactly-once processing
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # in sync replicas, which are eligible for promotion if current leader dies
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" # don't auto create topics when published to
     volumes:
       - kafka1_data:/bitnami/kafka # persist data
 
@@ -37,6 +38,7 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" # don't auto create topics when published to
     volumes:
       - kafka2_data:/bitnami/kafka
 
@@ -56,46 +58,10 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false" # don't auto create topics when published to
     volumes:
       - kafka3_data:/bitnami/kafka
-  
 
-  # UNCOMMENT ME
-  # kafka-4:
-  #   image: confluentinc/cp-kafka:7.6.1
-  #   container_name: kafka-4
-  #   hostname: kafka-4
-  #   ports:
-  #     - "9096:9092"
-  #   environment:
-  #     KAFKA_NODE_ID: 4
-  #     KAFKA_PROCESS_ROLES: broker
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-  #     KAFKA_LISTENERS: PLAINTEXT://:9092
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-4:9092
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
-  #   volumes:
-  #     - kafka4_data:/bitnami/kafka
-  #
-  # kafka-5:
-  #   image: confluentinc/cp-kafka:7.6.1
-  #   container_name: kafka-5
-  #   hostname: kafka-5
-  #   ports:
-  #     - "9097:9092"
-  #   environment:
-  #     KAFKA_NODE_ID: 5
-  #     KAFKA_PROCESS_ROLES: broker
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
-  #     KAFKA_LISTENERS: PLAINTEXT://:9092
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-5:9092
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
-  #   volumes:
-  #     - kafka5_data:/bitnami/kafka
 
   kafka-ui: # ui because it exists so why not!
     image: provectuslabs/kafka-ui:latest
@@ -105,13 +71,10 @@ services:
     environment:
       - KAFKA_CLUSTERS_0_NAME=walmart-kafka
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      # - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092,kafka-5:9092 # UNCOMMENT ME
     depends_on:
       - kafka-1
       - kafka-2
       - kafka-3
-      # - kafka-4 # # UNCOMMENT ME
-      # - kafka-5 # # UNCOMMENT ME
 
   producer-online:
     build: ./producers/online
@@ -120,13 +83,10 @@ services:
       - kafka-1
       - kafka-2
       - kafka-3
-      # - kafka-4 # UNCOMMENT ME
-      # - kafka-5 # UNCOMMENT ME
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      # - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092,kafka-5:9092 # UNCOMMENT ME
-      - TRAFFIC_MODE=NORMAL
-      # - TRAFFIC_MODE=SURGE # UNCOMMENT ME
+      # - TRAFFIC_MODE=NORMAL
+      - TRAFFIC_MODE=SURGE # UNCOMMENT ME
 
   producer-warehouse:
     build: ./producers/warehouse
@@ -135,13 +95,9 @@ services:
       - kafka-1
       - kafka-2
       - kafka-3
-      # - kafka-4# UNCOMMENT ME
-      # - kafka-5# UNCOMMENT ME
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      # - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092,kafka-5:9092 # UNCOMMENT ME
       - TRAFFIC_MODE=NORMAL
-      # - TRAFFIC_MODE=SURGE # UNCOMMENT ME
 
   producer-retail:
     build: ./producers/retail
@@ -150,26 +106,19 @@ services:
       - kafka-1
       - kafka-2
       - kafka-3
-      # - kafka-4# UNCOMMENT ME
-      # - kafka# UNCOMMENT ME
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      # - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092,kafka-5:9092 # UNCOMMENT ME
-      - TRAFFIC_MODE=NORMAL
-      # - TRAFFIC_MODE=SURGE # UNCOMMENT ME
+      # - TRAFFIC_MODE=NORMAL
+      - TRAFFIC_MODE=SURGE # UNCOMMENT ME
 
   processor:
     build: ./processor
-    container_name: processor
     depends_on:
       - kafka-1
       - kafka-2
       - kafka-3
-      # - kafka-4 # UNCOMMENT ME
-      # - kafka-5 # UNCOMMENT ME
     environment:
       - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
-      # - KAFKA_BROKERS=kafka-1:9092,kafka-2:9092,kafka-3:9092,kafka-4:9092,kafka-5:9092 # UNCOMMENT ME
 
   ws-bridge:
     build: ./consumer
@@ -199,7 +148,5 @@ volumes:
   kafka1_data:
   kafka2_data:
   kafka3_data:
-  # kafka4_data: # UNCOMMENT ME
-  # kafka5_data: # UNCOMMENT ME
 
   

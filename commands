@@ -1,0 +1,9 @@
+sudo -i
+cd /home/julia/Idea-Projects/kafka-walmart-demo
+docker compose up -d
+// wait like 30 seconds while showing dashboard and ui
+./setup-kafka.sh && ./prefill.sh
+// show topics and replications in ui, show dashboard with products.
+docker compose up -d
+// introduce consumer lag stats, then uncomment surge lines and re up to watch consumer lag go crazy
+docker compose up --scale processor=5 -d
